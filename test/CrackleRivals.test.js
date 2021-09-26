@@ -37,7 +37,7 @@ contract('CrackleRivals', accounts => {
         })
     })
 
-    describe('card max supply', async () => {
+    describe('card types max supply', async () => {
         it('get supply from contract', async () => {
             const epicMaxSupply = await contract.getCardTypeMaxSupply(CARD_TYPE.EPIC);
             const rareMaxSupply = await contract.getCardTypeMaxSupply(CARD_TYPE.RARE);
@@ -149,7 +149,7 @@ contract('CrackleRivals', accounts => {
                     })
                 }
             }
-            console.log('Characters: ', JSON.stringify(characters));
+            console.log('[Characters]: ', JSON.stringify(characters));
             assert.equal(characters.length, 4 * 2, "Characters ok\n\n");
         })
         it('mint characters for every clan', async () => {

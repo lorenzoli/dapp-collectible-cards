@@ -46,6 +46,20 @@ module.exports = {
       port: 7545,            // Standard Ethereum port (default: none)
       network_id: "*",       // Any network (default: none)
     },
+    // matic: {
+    //   provider: () => new HDWalletProvider({
+    //     mnemonic: {
+    //       phrase: mnemonic
+    //     },
+    //     providerOrUrl: `https://rpc-mumbai.matic.today`,
+    //     chainId: 80001
+    //   }),
+    //   network_id: 80001,
+    //   confirmations: 2,
+    //   timeoutBlocks: 200,
+    //   skipDryRun: true,
+    //   chainId: 80001
+    // }
     // Another network with more advanced options...
     // advanced: {
     // port: 8777,             // Custom port
