@@ -1,9 +1,18 @@
 const CrackleRivals = artifacts.require('./CrackleRivals.sol');
+const web3 = require('web3');
 
 const { assert } = require('chai');
 const { CARD_TYPE, MODIFIER_LIFE } = require('../utils/constant');
 
 const address = "0x31C51F0B141895f12AE58a50EC7A3e7784a2B40F";
+const cardMaxSupply = 100;
+const calculatedSupply = {
+    [CARD_TYPE.EPIC]: (cardMaxSupply / 100) * 45,
+    [CARD_TYPE.RARE]: (cardMaxSupply / 100) * 35,
+    [CARD_TYPE.LEGENDARY]: (cardMaxSupply / 100) * 15,
+    [CARD_TYPE.LIMITED]: (cardMaxSupply / 100) * 5
+}
+
 let skills = {}
 let characters = []
 
@@ -25,6 +34,20 @@ contract('CrackleRivals', accounts => {
             assert.notEqual(address, '')
             assert.notEqual(address, null)
             assert.notEqual(address, undefined)
+        })
+    })
+
+    describe('card max supply', async () => {
+        it('get supply from contract', async () => {
+            const epicMaxSupply = await contract.getCardTypeMaxSupply(CARD_TYPE.EPIC);
+            const rareMaxSupply = await contract.getCardTypeMaxSupply(CARD_TYPE.RARE);
+            const legendaryMaxSupply = await contract.getCardTypeMaxSupply(CARD_TYPE.LEGENDARY);
+            const limitedMaxSupply = await contract.getCardTypeMaxSupply(CARD_TYPE.LIMITED);
+
+            assert.equal(web3.utils.toNumber(epicMaxSupply), calculatedSupply[CARD_TYPE.EPIC], "Epic card max supply is not 45%");
+            assert.equal(web3.utils.toNumber(rareMaxSupply), calculatedSupply[CARD_TYPE.RARE], "Rare card max supply is not 35%");
+            assert.equal(web3.utils.toNumber(legendaryMaxSupply), calculatedSupply[CARD_TYPE.LEGENDARY], "Legendary card max supply is not 15%");
+            assert.equal(web3.utils.toNumber(limitedMaxSupply), calculatedSupply[CARD_TYPE.LIMITED], "Limited card max supply is not 5%");
         })
     })
 
@@ -121,30 +144,8 @@ contract('CrackleRivals', accounts => {
                         name: 'Character ' + i + ' for clan ' + clan,
                         description: 'none',
                         hash: 'okqdqqddwq',
-                        ability: {
-                            selfModifier: {
-                                modifierLife: MODIFIER_LIFE.AMPLIFIER,
-                                attack: 0,
-                                damage: Number((i % 2) + 1),
-                                energy: 0,
-                                health: 0
-                            },
-                            rivalModifier: {
-                                modifierLife: MODIFIER_LIFE.AMPLIFIER,
-                                attack: 0,
-                                damage: 0,
-                                energy: 0,
-                                health: 0
-                            },
-                            blocks: {
-                                skill: false,
-                                ability: false,
-                                attackModifier: false,
-                                damageModifier: i % 2 == 0,
-                                energyModifier: false,
-                                healthModifier: false
-                            }
-                        }
+                        attack: i + skills[clan].clanId + 1,
+                        damage: i + i + 1
                     })
                 }
             }
@@ -159,7 +160,8 @@ contract('CrackleRivals', accounts => {
                     character.name,
                     character.description,
                     character.hash,
-                    character.ability
+                    character.attack,
+                    character.damage
                 );
                 characterId++;
                 const newId = res.logs[0].args.characterId.toNumber();
@@ -167,38 +169,126 @@ contract('CrackleRivals', accounts => {
                 characters[characterId].id = newId;
             }
         })
-        it('check characters IDs', async () => {
+        it('check characters ID / Name / Attack / Damage', async () => {
             let clanId = 0;
             let characterId = 0;
             for (let i = 0; i < characters.length; i++) {
                 const retrived = await contract.getCharacter(i);
-                const toCheck = characters[i];
+
+                // Manual update indexes
                 if (i / 4 === 1) {
                     clanId++;
                     characterId = 0;
                 }
-                console.log('Checking:')
-                console.log('RetrivedId: ', retrived.clanId);
-                console.log('ExpectedId: ', clanId);
+
                 assert.equal(retrived.clanId, clanId, "Clan ID not match");
-
-                console.log('======');
-                console.log('RetrivedName: ', retrived.name);
-                console.log('ExpectedName: ', 'Character ' + characterId + ' for clan CLAN_' + clanId)
                 assert.equal(retrived.name, 'Character ' + characterId + ' for clan CLAN_' + clanId, "Name not match")
+                assert.equal(web3.utils.toNumber(retrived.attack), characterId + clanId + 1, "Bad attack for character " + retrived.name);
+                assert.equal(web3.utils.toNumber(retrived.damage), characterId + characterId + 1, "Bad damage for character " + retrived.name);
 
-                console.log('======');
-                console.log('RetrivedAbility [self]: ', retrived.ability.selfModifier)
-                console.log('ExpectedAbility [self]: ', {
-                    modifierLife: MODIFIER_LIFE.AMPLIFIER,
-                    attack: 0,
-                    damage: Number((i % 2) + 1),
-                    energy: 0,
-                    health: 0
-                })
-                console.log('\n\n')
                 characterId++;
             }
         })
+    })
+
+    describe('mint character cards', async () => {
+        it('mint for one character', async () => {
+            const firstCharacterId = 0;
+            let totalMinted = 0;
+            const totalTypes = Object.keys(CARD_TYPE).length - 1; // Not count common
+
+            // Starting type from 1
+            // because COMMON type is unlimited
+            let totalMintedType = {}
+
+            // Go over total types
+            for (let type = 1; type <= totalTypes; type++) {
+                totalMintedType = {
+                    ...totalMintedType,
+                    [type]: 0
+                }
+
+                // Mint until total type < calculated type supply
+                for (let totalCurrent = 0; totalCurrent < calculatedSupply[type]; totalCurrent++) {
+                    await contract.mintCard(
+                        type,
+                        firstCharacterId,
+                        {
+                            selfModifier: {
+                                modifierLife: MODIFIER_LIFE.AMPLIFIER,
+                                attack: 0,
+                                damage: 5,
+                                energy: 0,
+                                health: 0
+                            },
+                            rivalModifier: {
+                                modifierLife: MODIFIER_LIFE.AMPLIFIER,
+                                attack: 0,
+                                damage: 0,
+                                energy: 0,
+                                health: 0
+                            },
+                            blocks: {
+                                skill: false,
+                                ability: false,
+                                attackModifier: false,
+                                damageModifier: false,
+                                energyModifier: false,
+                                healthModifier: false
+                            }
+                        }
+                    )
+                    totalMintedType = {
+                        ...totalMintedType,
+                        [type]: totalMintedType[type] + 1
+                    }
+                    totalMinted++;
+                }
+            }
+
+            assert.equal(totalMinted, cardMaxSupply, "Mint more than " + cardMaxSupply + ' max supply');
+            assert.equal(totalMintedType[CARD_TYPE.EPIC], calculatedSupply[CARD_TYPE.EPIC], "Bad supply " + CARD_TYPE.EPIC);
+            assert.equal(totalMintedType[CARD_TYPE.RARE], calculatedSupply[CARD_TYPE.RARE], "Bad supply " + CARD_TYPE.RARE);
+            assert.equal(totalMintedType[CARD_TYPE.LEGENDARY], calculatedSupply[CARD_TYPE.LEGENDARY], "Bad supply " + CARD_TYPE.LEGENDARY);
+            assert.equal(totalMintedType[CARD_TYPE.LIMITED], calculatedSupply[CARD_TYPE.LIMITED], "Bad supply " + CARD_TYPE.LIMITED);
+        })
+        it('get character cards', async () => {
+            const res = await contract.getCardsByCharacter(0, 100);
+            console.log(JSON.stringify(res));
+            const last = res[res.length - 1];
+
+            console.log(last.cardType);
+            console.log(last.characterId);
+            console.log(JSON.stringify(last.ability));
+        })
+        // it('check every minted from contract', async () => {
+        //     let totalEpic = 0;
+        //     let totalRare = 0;
+        //     let totalLegendary = 0;
+        //     let totalLimited = 0;
+
+        //     for (let expectedCardId = 0; expectedCardId < cardMaxSupply; expectedCardId++) {
+        //         const retrived = await contract.getCharacterCardById(expectedCardId);
+        //         switch (web3.utils.toNumber(retrived.cardType)) {
+        //             case CARD_TYPE.EPIC:
+        //                 totalEpic++;
+        //                 break;
+        //             case CARD_TYPE.RARE:
+        //                 totalRare++;
+        //                 break;
+        //             case CARD_TYPE.LEGENDARY:
+        //                 totalLegendary++;
+        //                 break;
+        //             case CARD_TYPE.LIMITED:
+        //                 totalLimited++;
+        //                 break;
+        //         }
+        //     }
+        //     console.log(totalEpic, totalRare, totalLegendary, totalLimited);
+        //     assert.equal(totalEpic, calculatedSupply[CARD_TYPE.EPIC], "Bad minted epic");
+        //     assert.equal(totalRare, calculatedSupply[CARD_TYPE.RARE], "Bad minted rare");
+        //     assert.equal(totalLegendary, calculatedSupply[CARD_TYPE.LEGENDARY], "Bad minted legendary");
+        //     assert.equal(totalLimited, calculatedSupply[CARD_TYPE.LIMITED], "Bad minted limited");
+        // })
     })
 })

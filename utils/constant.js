@@ -1,9 +1,9 @@
 const CARD_TYPE = {
-    COMMON: 'COMMON',
-    EPIC: 'EPIC',
-    RARE: 'RARE',
-    LEGENDARY: 'LEGENDARY',
-    LIMITED: 'LIMITED'
+    COMMON: 0,
+    EPIC: 1,
+    RARE: 2,
+    LEGENDARY: 3,
+    LIMITED: 4
 }
 
 const MODIFIER_LIFE = {

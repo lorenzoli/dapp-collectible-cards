@@ -22,7 +22,7 @@ contract CrackleRivals is ERC721, Ownable {
     string constant LIMITED_CARD_HASH = "to-define";
 
     // Card distribution
-    uint256 constant CHARACTER_CARD_MAX_SUPPLY = 100;
+    uint8 constant CHARACTER_CARD_MAX_SUPPLY = 100;
     mapping(CardType => uint8) _cardsSupply;
 
     /*
@@ -84,14 +84,14 @@ contract CrackleRivals is ERC721, Ownable {
         string name;
         string description;
         string hash;
-        Attribute ability;
+        uint8 attack;
+        uint8 damage;
     }
 
     struct CharacterCard {
         CardType cardType;
         uint256 characterId;
-        uint8 attack;
-        uint8 damage;
+        Attribute ability;
         address owner;
     }
 
@@ -127,14 +127,16 @@ contract CrackleRivals is ERC721, Ownable {
         string memory name,
         string memory description,
         string memory hash,
-        Attribute memory ability
+        uint8 attack,
+        uint8 damage
     ) public onlyOwner {
         _characters[nextCharacterId] = Character(
             clanId,
             name,
             description,
             hash,
-            ability
+            attack,
+            damage
         );
         emit CharacterMinted(nextCharacterId);
 
@@ -144,14 +146,12 @@ contract CrackleRivals is ERC721, Ownable {
     function mintCard(
         CardType cardType,
         uint256 characterId,
-        uint8 attack,
-        uint8 damage
+        Attribute memory ability
     ) public onlyOwner {
         _characterCards[nextCharacterCardId] = CharacterCard(
             cardType,
             characterId,
-            attack,
-            damage,
+            ability,
             msg.sender
         );
 
@@ -186,7 +186,7 @@ contract CrackleRivals is ERC721, Ownable {
         return _characters[characterId];
     }
 
-    function getCharacterCard(uint256 characterCardId)
+    function getCharacterCardById(uint256 characterCardId)
         public
         view
         returns (CharacterCard memory)
@@ -194,10 +194,34 @@ contract CrackleRivals is ERC721, Ownable {
         return _characterCards[characterCardId];
     }
 
+    function getCardsByCharacter(uint256 characterId, uint8 limit)
+        public
+        view
+        returns (CharacterCard[] memory)
+    {
+        CharacterCard[] memory cards = new CharacterCard[](limit);
+        uint8 count = 0;
+        for (uint8 i = 0; i < nextCharacterCardId; i++) {
+            if (count < limit) {
+                if (_characterCards[i].characterId == characterId) {
+                    cards[count] = _characterCards[i];
+                    count++;
+                }
+            } else {
+                break;
+            }
+        }
+        return cards;
+    }
+
+    function getCardMaxSupply() public view returns (uint8) {
+        return CHARACTER_CARD_MAX_SUPPLY;
+    }
+
     function getCardTypeMaxSupply(CardType cardType)
         public
         view
-        returns (uint256)
+        returns (uint8)
     {
         return (CHARACTER_CARD_MAX_SUPPLY / 100) * _cardsSupply[cardType];
     }
