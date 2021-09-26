@@ -8,14 +8,22 @@ contract CrackleRivals is ERC721, Ownable {
     // Character card type
     enum CardType {
         COMMON,
-        GOLD,
+        EPIC,
         RARE,
+        LEGENDARY,
         LIMITED
     }
+
+    // Hash of cards
     string constant COMMON_CARD_HASH = "to-define";
-    string constant GOLD_CARD_HASH = "to-define";
+    string constant ERPIC_CARD_HASH = "to-define";
     string constant RARE_CARD_HASH = "to-define";
+    string constant LEGENDARY_CARD_HASH = "to-define";
     string constant LIMITED_CARD_HASH = "to-define";
+
+    // Card distribution
+    uint256 constant CHARACTER_CARD_MAX_SUPPLY = 100;
+    mapping(CardType => uint8) _cardsSupply;
 
     /*
      ** attributes
@@ -24,17 +32,19 @@ contract CrackleRivals is ERC721, Ownable {
     // Reducer => Same value min. every round
     // W_Round => Win current round bonus for next round
     // L_Round => Lose current round bonus for next round
+    // TOT_ATK => When Totale Attack count is more than a certain limit
     enum ModifierLife {
         AMPLIFIER,
         REDUCER,
         W_ROUND,
-        L_ROUND
+        L_ROUND,
+        TOT_ATK
     }
 
     struct Modifier {
         ModifierLife modifierLife;
         uint8 attack;
-        uint8 defence;
+        uint8 damage;
         uint8 energy;
         uint8 health;
     }
@@ -47,7 +57,7 @@ contract CrackleRivals is ERC721, Ownable {
         bool skill;
         bool ability;
         bool attackModifier;
-        bool defenceModifier;
+        bool damageModifier;
         bool energyModifier;
         bool healthModifier;
     }
@@ -81,7 +91,7 @@ contract CrackleRivals is ERC721, Ownable {
         CardType cardType;
         uint256 characterId;
         uint8 attack;
-        uint8 defence;
+        uint8 damage;
         address owner;
     }
 
@@ -94,7 +104,12 @@ contract CrackleRivals is ERC721, Ownable {
     mapping(uint256 => CharacterCard) private _characterCards;
     uint256 nextCharacterCardId = 0;
 
-    constructor() ERC721("Crackle Rivals", "CKL") {}
+    constructor() ERC721("Crackle Rivals", "CKL") {
+        _cardsSupply[CardType.EPIC] = 45;
+        _cardsSupply[CardType.RARE] = 35;
+        _cardsSupply[CardType.LEGENDARY] = 15;
+        _cardsSupply[CardType.LIMITED] = 5;
+    }
 
     function mintClan(
         string memory name,
@@ -130,13 +145,13 @@ contract CrackleRivals is ERC721, Ownable {
         CardType cardType,
         uint256 characterId,
         uint8 attack,
-        uint8 defence
+        uint8 damage
     ) public onlyOwner {
         _characterCards[nextCharacterCardId] = CharacterCard(
             cardType,
             characterId,
             attack,
-            defence,
+            damage,
             msg.sender
         );
 
@@ -177,6 +192,14 @@ contract CrackleRivals is ERC721, Ownable {
         returns (CharacterCard memory)
     {
         return _characterCards[characterCardId];
+    }
+
+    function getCardTypeMaxSupply(CardType cardType)
+        public
+        view
+        returns (uint256)
+    {
+        return (CHARACTER_CARD_MAX_SUPPLY / 100) * _cardsSupply[cardType];
     }
 
     /*

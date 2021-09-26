@@ -1,0 +1,17 @@
+const CARD_TYPE = {
+    COMMON: 'COMMON',
+    EPIC: 'EPIC',
+    RARE: 'RARE',
+    LEGENDARY: 'LEGENDARY',
+    LIMITED: 'LIMITED'
+}
+
+const MODIFIER_LIFE = {
+    AMPLIFIER: 0,
+    REDUCER: 1,
+    WIN_ROUND: 2,
+    LOSE_ROUND: 3,
+    TOTAL_ATTACK: 4
+}
+
+module.exports = { CARD_TYPE, MODIFIER_LIFE }
